@@ -2,6 +2,7 @@ require 'stoor/logger'
 require 'stoor/github_auth'
 require 'stoor/git_config'
 require 'stoor/transform_content'
+require 'stoor/replace_content'
 require 'stoor/views/layout'
 require 'stoor/views/logout'
 

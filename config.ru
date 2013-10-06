@@ -88,10 +88,19 @@ if repo_exists
       after: '<style type="text/css">#wiki-wrapper { width: 90%; } .markdown-body table { width: 100%; }</style>'
   end
 
+  wiki_options = { :universal_toc => false }
+  path = '/'
   Precious::App.set(:gollum_path, gollum_path)
   Precious::App.set(:default_markup, :markdown)
-  Precious::App.set(:wiki_options, { :universal_toc =>false })
-  run Precious::App
+  if ENV['STOOR_GITHUB_COMPATIBILITY']
+    wiki_options[:base_path] = '/wiki'
+    path = '/wiki'
+    use Stoor::ReplaceContent, /a href="wiki\//, 'a href="', ->(request, headers) { headers['Content-Type'] !~ /\Atext\/html/ }
+  end
+  Precious::App.set(:wiki_options, wiki_options)
+  map path do
+    run Precious::App
+  end
 else
   run Proc.new { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ message ] ] }
   puts message
