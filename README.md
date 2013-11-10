@@ -46,9 +46,11 @@ If you don't have a repo yet for your wiki . . .
 
 ### Configuration via environment variables
 
-Stoor is configured via environment variables of the form `<name>_<some token>`. `<name>` is taken from the name
-of the directory in which the application resides. If you clone the app or use it as a Gem, it will be: `STOOR`
-If you clone into a directory with a different name (e.g., `stoor2`) it will be: `STOOR2`. This facilitates running
+Stoor is configured via environment variables of the form `<name>_<some token>`. If you use the `stoor` command,
+the name will be `STOOR` and a typical config variable would be something like `STOOR_WIKI_PATH`. However, if
+you clone the repo and run Stoor with rackup, thin, passenger, or some other applcation that can leverage a
+rackup `config.ru` file, then `<name>` is taken from the name
+of the directory in which the application resides. If you clone into a directory with a different name (e.g., `stoor2`) it will be: `STOOR2`. This facilitates running
 two instances of Stoor in the same process (see below regarding Apache).
 
 ### Specify the Wiki repo location
@@ -116,6 +118,12 @@ If the user is not a member of the specified team, they aren't allowed access.
     STOOR_READONLY=y          # Create, New, Delete buttons and links hidden;
                               # /create/*, /delete/*, POST, and PUT requests redirected to "sorry" page
 
+## Log files
+
+They go in the projects `log/` directory (including the `log/` directory _in the gem_). This should be configurable. TODO: Ideally,
+all logs when run with the `stoor` command should go to stdout; when run via a web server, the log directory should be set
+with an environment variable.
+
 ## How I run it
 
 I like having my own personal wiki. Since Apache is ubiquitous on Macs, I run the Wiki with configuration in `/etc/apache2/httpd.conf`,
@@ -155,13 +163,35 @@ and finally:
 
 Now browse your wiki at <http://wiki.local>
 
+### Running Stoor's rackup file directly
+
+The `stoor` command delegates to thin. You might want to run Stoor with another server that can use a rackup config file (`config.ru`).
+
+To do this, simply clone the repo, and run whatever server you like. For example,
+
+    git clone https://github.com/jgn/stoor.git
+    cd stoor
+    STOOR_WIKI_PATH=/Users/jgn/src/HIPAA.wiki unicorn -p 3000
+
 ### Running two instances of Stoor in the same Apache
 
-You may want to run two instances of Stoor in the same Apache. For instance, they might both use the same Wiki path,
+You may want to run two instances of Stoor in (or managed by) the same process (e.g., Apache). For instance, they might both use the same Wiki path,
 but one is set to be read-only, while the other allows edits.
 
 To do this, don't set the DocumentRoot to the Gem directory. Intead, clone the repo twice, once into a directory
-such as `stoor1` the other into `stoor2`. Then configure
+such as `stoor1` the other into `stoor2`.
+
+When Stoor is not run via the `stoor` command, it will use the directory in which the `config.ru` file resides as the
+prefix for the environment variable settings. For example, if you clone into `stoor1`, the environment variable
+to set the wiki path will be: `STOOR1_WIKI_PATH`. By this means, you can configure the two setups without clashing
+over the environment variable names.
+
+For example,
+
+    git clone https://github.com/jgn/stoor.git stoor1
+    git clone https://github.com/jgn/stoor.git stoor2
+
+Then configure
 the two VirtualHosts with environment variables based on each directory. Something like this:
 
     <VirtualHost *:80>

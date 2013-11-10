@@ -2,16 +2,20 @@ require 'logger'
 
 module Stoor
   class Config
-    def initialize(file, running_via_cmd)
-      @file, @running_via_cmd = file, running_via_cmd
+    def initialize(config_ru_path, running_via_cmd)
+      @config_ru_path, @running_via_cmd = config_ru_path, running_via_cmd
     end
 
     def dirname
       @dirname ||= begin
-        dirname = File.dirname(@file)
+        dirname = File.dirname(@config_ru_path)
         dirname = `pwd`.chomp if dirname == '.'  # Probably being run by Apache
         dirname
       end
+    end
+
+    def log_to_stdout?
+      @running_via_cmd && env('LOG_DIR').nil?
     end
 
     def env_prefix
@@ -24,17 +28,24 @@ module Stoor
       ENV["#{env_prefix}_#{token}"]
     end
 
-    def log(m)
+    def log(m = "")
       log_stream.write(m + "\n")
     end
 
+    def log_dir
+      log_dir ||= begin
+        ld = env('LOG_DIR')
+        ld ? ld : "#{dirname}/log"
+      end
+    end
+
     def log_frag
-      @log_frag ||= "#{dirname}/log/#{ENV['RACK_ENV']}"
+      @log_frag ||= "#{log_dir}/#{ENV['RACK_ENV']}"
     end
 
     def access_logger
       @access_logger ||= begin
-        access_logger = ::Logger.new("#{log_frag}_access.log")
+        access_logger = ::Logger.new(log_to_stdout? ? $stdout : "#{log_frag}_access.log")
         access_logger.instance_eval do
           def write(msg); self.send(:<<, msg); end
         end
@@ -45,7 +56,7 @@ module Stoor
 
     def log_stream
       @log_stream ||= begin
-        log_stream = File.open("#{log_frag}.log", 'a+')
+        log_stream = log_to_stdout? ? $stdout : File.open("#{log_frag}.log", 'a+')
         log_stream.sync = true
         log_stream
       end
@@ -54,7 +65,7 @@ module Stoor
     def dump_env
       log "#{env_prefix} env"
       ENV.each_pair do |k, v|
-        log "  #{k}: #{v}" if k =~ /\A#{env_prefix}/
+        log "  #{k}=\"#{v}\" \\" if k =~ /\A#{env_prefix}/
       end
     end
 

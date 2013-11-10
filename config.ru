@@ -20,6 +20,7 @@ gollum_path = config.env('WIKI_PATH') || config.dirname
 
 config.dump_env
 config.log "gollum_path: #{gollum_path}"
+config.log
 
 if message = config.repo_missing?(gollum_path)
   puts message
